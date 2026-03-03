@@ -4,11 +4,26 @@ set -euo pipefail
 
 REQUIRED_MAJOR=20
 
+# 检查原生模块编译工具链（node-pty 等需要 g++ 和 make）
+ensure_build_tools() {
+  if command -v g++ >/dev/null 2>&1 && command -v make >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
+    return 0
+  fi
+  echo "🔧 安装原生模块编译工具链（g++、make、python3）..."
+  if command -v dnf >/dev/null 2>&1; then
+    sudo dnf install -y gcc-c++ make python3
+  elif command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get update
+    sudo apt-get install -y build-essential python3
+  fi
+}
+
 # 检查 node 是否已安装且版本满足要求
 if command -v node >/dev/null 2>&1; then
   NODE_VERSION=$(node -v | sed 's/^v//')
   NODE_MAJOR=$(echo "$NODE_VERSION" | cut -d. -f1)
   if [ "$NODE_MAJOR" -ge "$REQUIRED_MAJOR" ]; then
+    ensure_build_tools
     exit 0
   fi
   echo "⚠️  当前 Node.js 版本为 v$NODE_VERSION，需要 >= v$REQUIRED_MAJOR"
@@ -62,6 +77,7 @@ fi
 
 # 验证安装
 if command -v node >/dev/null 2>&1; then
+  ensure_build_tools
   echo "✅ Node.js $(node -v) 安装完成"
 else
   echo "❌ Node.js 安装失败，请手动安装: https://nodejs.org/"
