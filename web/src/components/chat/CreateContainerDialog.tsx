@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ChevronDown,
   ChevronRight,
@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { DirectoryBrowser } from '../shared/DirectoryBrowser';
 import { useChatStore } from '../../stores/chat';
 import { useAuthStore } from '../../stores/auth';
+import { useMonitorStore } from '../../stores/monitor';
 
 interface CreateContainerDialogProps {
   open: boolean;
@@ -45,6 +46,12 @@ export function CreateContainerDialog({
 
   const createFlow = useChatStore((s) => s.createFlow);
   const canHostExec = useAuthStore((s) => s.user?.role === 'admin');
+  const loadStatus = useMonitorStore((s) => s.loadStatus);
+  const dockerImageExists = useMonitorStore((s) => s.status?.dockerImageExists);
+
+  useEffect(() => {
+    if (open) loadStatus();
+  }, [open, loadStatus]);
 
   const reset = () => {
     setName('');
@@ -114,6 +121,16 @@ export function CreateContainerDialog({
             />
           </div>
 
+          {/* Docker not available warning */}
+          {!advancedOpen && dockerImageExists === false && (
+            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-700">
+                未检测到 Docker 或镜像未构建。默认的 Docker 模式需要先安装并启动 Docker。可在高级选项中切换为宿主机模式。
+              </p>
+            </div>
+          )}
+
           {/* Advanced options */}
           <div className="border rounded-lg overflow-hidden">
             <button
@@ -148,6 +165,14 @@ export function CreateContainerDialog({
                         <p className="text-xs text-muted-foreground mt-0.5">在隔离的 Docker 环境中执行</p>
                       </div>
                     </label>
+                    {executionMode === 'container' && dockerImageExists === false && (
+                      <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                        <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-700">
+                          未检测到 Docker 或镜像未构建。Docker 模式需要先安装并启动 Docker，然后在监控页构建镜像。
+                        </p>
+                      </div>
+                    )}
                     <label className={`flex items-start gap-3 p-2 rounded-lg border transition-colors ${canHostExec ? 'cursor-pointer hover:bg-accent/50' : 'opacity-50 cursor-not-allowed'}`}>
                       <input
                         type="radio"

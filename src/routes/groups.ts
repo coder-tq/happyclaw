@@ -354,6 +354,18 @@ groupRoutes.post('/', authMiddleware, async (c) => {
   const initGitUrl = validation.data.init_git_url;
   const authUser = c.get('user') as AuthUser;
 
+  // container 模式需要 Docker 可用
+  if (executionMode === 'container') {
+    try {
+      await execFileAsync('docker', ['info'], { timeout: 5000 });
+    } catch {
+      return c.json(
+        { error: '未检测到 Docker。请先安装并启动 Docker，或选择宿主机模式。安装指南：https://docs.docker.com/get-docker/' },
+        400,
+      );
+    }
+  }
+
   // 互斥校验：init_source_path 和 init_git_url 不能同时指定
   if (initSourcePath && initGitUrl) {
     return c.json(
